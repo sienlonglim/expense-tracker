@@ -15,4 +15,6 @@ COMMANDS = {
     "cancel": "Cancel current operation",
     "help": "Show all available commands",
     "list": "View your recent spends",
+    "reset": "Resets all your spends",
+    "delete": "Deletes last n spends",
 }

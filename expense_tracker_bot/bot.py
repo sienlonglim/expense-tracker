@@ -35,6 +35,10 @@ class SpendForm(StatesGroup):
     month_year = State()
 
 
+class ResetForm(StatesGroup):
+    confirm = State()
+
+
 async def init_db():
     """Initialize DB tables on startup"""
     with duckdb.connect(os.getenv("DB_PATH")) as con:
@@ -117,7 +121,7 @@ async def process_month_year(message: Message, state: FSMContext):
     if not re.match(r"^\d{4}-\d{2}$", message.text):
         return await message.answer("❌ Invalid format. Enter YYYY-MM:")
     data = await state.get_data()
-    with duckdb.connect(os.getenv("DB_PATH")) as con:  # ✅ Context manager
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
         con.execute(
             load_sql("insert_spend.sql"),
             [message.from_user.id, data["username"], data["card"], data["amount"], message.text],
@@ -130,7 +134,7 @@ async def process_month_year(message: Message, state: FSMContext):
 
 @router.message(Command("export"))
 async def export_data(message: Message):
-    with duckdb.connect(os.getenv("DB_PATH")) as con:  # ✅ Context manager
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
         df = con.execute(load_sql("export_all.sql")).df()
     if df.empty:
         return await message.answer("No data yet.")
@@ -150,23 +154,25 @@ async def export_data(message: Message):
 @router.message(Command("stats"))
 async def stats(message: Message):
     user_id = message.from_user.id
-    with duckdb.connect(os.getenv("DB_PATH")) as con:  # ✅ Context manager
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
         result = con.execute(load_sql("stats_user.sql"), [user_id]).df()
     if result.empty:
         return await message.answer("No spends recorded for you yet.")
 
-    stats_text = "💰 Your Spending Stats:\n\n"
+    username = message.from_user.username or "Anonymous"
+    stats_text = f"💰 @{username} Monthly Stats:\n\n"
+
     for _, row in result.iterrows():
-        stats_text += f"💳 {row['card']}\n"
+        stats_text += f"📅 {row['month_year']}\n"
         stats_text += f"💵 Total: ${row['total']:.2f}\n"
-        stats_text += f"📊 Transactions: {int(row['transactions'])}\n\n"
+        stats_text += f"📊 Txns: {int(row['transactions'])} | Avg: ${row['avg_spend']:.2f}\n\n"
     await message.answer(stats_text)
 
 
 @router.message(Command("list"))
 async def list_spends(message: Message):
     user_id = message.from_user.id
-    with duckdb.connect(os.getenv("DB_PATH")) as con:  # ✅ Context manager
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
         result = con.execute(load_sql("list_user.sql"), [user_id]).df()
     if result.empty:
         return await message.answer("No spends recorded for you yet.")
@@ -185,6 +191,37 @@ async def cancel(message: Message, state: FSMContext):
     if current:
         await state.clear()
         await message.answer("❌ Cancelled.", reply_markup=ReplyKeyboardRemove())
+
+
+@router.message(Command("reset"))
+async def reset_start(message: Message, state: FSMContext):
+    username = message.from_user.username or "Anonymous"
+    await state.set_state(ResetForm.confirm)
+    await message.answer(
+        f"⚠️  PERMANENT RESET\n\n"
+        f"This will delete *ALL* your spend data!\n\n"
+        f"@{username} - Are you sure? Reply <code>Y</code>",
+        parse_mode="HTML",
+    )
+
+
+@router.message(ResetForm.confirm)
+async def reset_confirm(message: Message, state: FSMContext):
+    if message.text.strip().upper() != "Y":
+        await state.clear()
+        return await message.answer("✅ Reset cancelled. Your data is safe.")
+
+    user_id = message.from_user.id
+    sql = load_sql("delete_user_data.sql")
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
+        result = con.execute(sql, [user_id])
+        deleted = result.rowcount
+
+    username = message.from_user.username or "Anonymous"
+    await state.clear()
+    await message.answer(
+        f"🗑️ Reset complete!\n\nDeleted {deleted} records for @{username}\nStart fresh with /add"
+    )
 
 
 async def start_polling(token: str):
