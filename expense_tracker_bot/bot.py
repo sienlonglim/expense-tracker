@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 import re
 
 import duckdb
@@ -23,7 +24,13 @@ from aiogram.types import (
 from .constants import COMMANDS, CREDIT_CARDS
 from .sql import load_sql
 
+# Logging
 logging.basicConfig(level=logging.INFO)
+handler = logging.FileHandler(Path("bot.log"))
+handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logging.getLogger().addHandler(handler)
+
+# Create router
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
@@ -41,6 +48,10 @@ class CommentForm(StatesGroup):
     month_year = State()
 
 
+class BackUpForm(StatesGroup):
+    database = State()
+
+
 class ResetForm(StatesGroup):
     confirm = State()
 
@@ -48,6 +59,7 @@ class ResetForm(StatesGroup):
 async def init_db():
     """Initialize DB tables on startup"""
     with duckdb.connect(os.getenv("DB_PATH")) as con:
+        logging.info(f"Connected to {os.getenv("DB_PATH")}")
         con.execute(load_sql("create_spending_table.sql"))
         con.execute(load_sql("create_comment_table.sql"))
 
@@ -189,6 +201,19 @@ async def export_data(message: Message):
 
     os.remove(csv_path)
     os.remove(excel_path)
+
+
+@router.message(Command("backup"))
+async def back_up_data(message: Message, state: FSMContext):
+    await state.set_state(BackUpForm.database)
+    await message.answer("🗄️ Enter database name")
+
+
+@router.message(BackUpForm.database)
+async def process_back_up_data(message: Message, state: FSMContext):
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
+        con.execute(load_sql("back_up_data.sql").format(backup_file=f"data/backups/{message.text}.db"))
+    await message.answer(f"Data backed up to {message.text}.db")
 
 
 @router.message(Command("stats"))

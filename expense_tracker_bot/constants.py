@@ -19,4 +19,5 @@ COMMANDS = {
     "list": "View your recent spends",
     "reset": "Resets all your spends",
     "delete": "Deletes last n spends",
+    "backup": "Back up to a local database instance",
 }
