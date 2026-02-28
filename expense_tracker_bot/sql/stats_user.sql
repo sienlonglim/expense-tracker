@@ -1,9 +1,9 @@
-SELECT 
+select 
     month_year,
-    SUM(amount) as total,
-    COUNT(*) as transactions,
-    AVG(amount) as avg_spend
-FROM spends 
-WHERE user_id = ?
-GROUP BY month_year
-ORDER BY month_year DESC
+    sum(amount) as total,
+    count(*) as transactions,
+    avg(amount) as avg_spend
+from spends
+where user_id = ?
+group by month_year
+order by month_year desc

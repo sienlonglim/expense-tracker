@@ -35,6 +35,12 @@ class SpendForm(StatesGroup):
     month_year = State()
 
 
+class CommentForm(StatesGroup):
+    username = State()
+    comment = State()
+    month_year = State()
+
+
 class ResetForm(StatesGroup):
     confirm = State()
 
@@ -42,7 +48,8 @@ class ResetForm(StatesGroup):
 async def init_db():
     """Initialize DB tables on startup"""
     with duckdb.connect(os.getenv("DB_PATH")) as con:
-        con.execute(load_sql("create_table.sql"))
+        con.execute(load_sql("create_spending_table.sql"))
+        con.execute(load_sql("create_comment_table.sql"))
 
 
 def get_card_keyboard():
@@ -132,6 +139,39 @@ async def process_month_year(message: Message, state: FSMContext):
     )
 
 
+@router.message(Command("comment"))
+async def comment(message: Message, state: FSMContext):
+    await state.set_state(CommentForm.username)
+    username = message.from_user.username or "Anonymous"
+    await state.update_data(username=username)
+    await state.set_state(CommentForm.comment)
+    await message.answer("💬 Enter comment")
+
+
+@router.message(CommentForm.comment)
+async def process_comment(message: Message, state: FSMContext):
+    await state.update_data(comment=message.text)
+    await state.set_state(CommentForm.month_year)
+    await message.answer("📅 Enter YYYY-MM (e.g. 2026-01):")
+
+
+@router.message(CommentForm.month_year)
+async def process_comment_month_year(message: Message, state: FSMContext):
+    if not re.match(r"^\d{4}-\d{2}$", message.text):
+        return await message.answer("❌ Invalid format. Enter YYYY-MM:")
+
+    data = await state.get_data()
+    await state.clear()
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
+        con.execute(
+            load_sql("insert_comment.sql"),
+            [message.from_user.id, data["username"], data["comment"], message.text],
+        )
+    await message.answer(
+        f"✅ Added comment: {data['username']} | {data['comment']} | {message.text}"
+    )
+
+
 @router.message(Command("export"))
 async def export_data(message: Message):
     with duckdb.connect(os.getenv("DB_PATH")) as con:
@@ -156,6 +196,7 @@ async def stats(message: Message):
     user_id = message.from_user.id
     with duckdb.connect(os.getenv("DB_PATH")) as con:
         result = con.execute(load_sql("stats_user.sql"), [user_id]).df()
+        df_comments = con.execute(load_sql("list_comments.sql"), [user_id]).df()
     if result.empty:
         return await message.answer("No spends recorded for you yet.")
 
@@ -165,7 +206,14 @@ async def stats(message: Message):
     for _, row in result.iterrows():
         stats_text += f"📅 {row['month_year']}\n"
         stats_text += f"💵 Total: ${row['total']:.2f}\n"
-        stats_text += f"📊 Txns: {int(row['transactions'])} | Avg: ${row['avg_spend']:.2f}\n\n"
+        stats_text += f"📊 Txns: {int(row['transactions'])} | Avg: ${row['avg_spend']:.2f}\n"
+        month_comments = df_comments[df_comments['month_year'] == row['month_year']]
+        if not month_comments.empty:
+            stats_text += "💬 Comments:\n"
+            for _, comment_row in month_comments.iterrows():
+                stats_text += f"  • {comment_row['comment']}\n"
+        stats_text += "\n"
+
     await message.answer(stats_text)
 
 

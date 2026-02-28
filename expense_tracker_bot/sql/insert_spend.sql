@@ -1,2 +1,2 @@
-INSERT INTO spends (user_id, username, card, amount, month_year)
-VALUES (?, ?, ?, ?, ?)
+insert into spends (user_id, username, card, amount, month_year)
+values (?, ?, ?, ?, ?)

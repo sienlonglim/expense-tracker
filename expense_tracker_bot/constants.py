@@ -3,6 +3,7 @@ CREDIT_CARDS = {
     "uob ladys": "UOB Lady's",
     "citireward": "Citi Rewards",
     "trustlink": "Trust Link",
+    "trust cashback": "Trust Cashback",
     "dbs yuu": "DBS Yuu",
     "Maribank": "Maribank",
 }
@@ -10,6 +11,7 @@ CREDIT_CARDS = {
 COMMANDS = {
     "start": "Start the bot",
     "add": "Log a new credit card spend (select from menu)",
+    "comment": "Log a comment on spending",
     "export": "Export all spends as CSV and Excel",
     "stats": "View your spending statistics",
     "cancel": "Cancel current operation",

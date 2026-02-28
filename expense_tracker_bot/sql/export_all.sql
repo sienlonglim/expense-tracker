@@ -1,1 +1,1 @@
-SELECT * FROM spends ORDER BY created_at DESC
+select * from spends order by created_at desc

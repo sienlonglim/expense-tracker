@@ -1,1 +1,1 @@
-DELETE FROM spends WHERE user_id = ?
+delete from spends where user_id = ?
