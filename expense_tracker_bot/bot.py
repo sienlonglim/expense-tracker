@@ -56,6 +56,10 @@ class ResetForm(StatesGroup):
     confirm = State()
 
 
+class DeleteForm(StatesGroup):
+    count = State()
+
+
 async def init_db():
     """Initialize DB tables on startup"""
     with duckdb.connect(os.getenv("DB_PATH")) as con:
@@ -294,6 +298,43 @@ async def reset_confirm(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         f"🗑️ Reset complete!\n\nDeleted {deleted} records for @{username}\nStart fresh with /add"
+    )
+
+
+@router.message(Command("delete"))
+async def delete_start(message: Message, state: FSMContext):
+    await state.set_state(DeleteForm.count)
+    await message.answer(
+        "🗑️ Delete spends\n\n"
+        "Enter how many of your most recent spends to delete (e.g. 1, 3, 5):\n"
+        "Or reply 0 to cancel."
+    )
+
+
+@router.message(DeleteForm.count)
+async def delete_confirm(message: Message, state: FSMContext):
+    text = message.text.strip()
+
+    if not text.isdigit():
+        return await message.answer("❌ Invalid number. Enter a positive integer (e.g. 3) or 0 to cancel:")
+
+    n = int(text)
+    if n == 0:
+        await state.clear()
+        return await message.answer("✅ Delete cancelled. No records were removed.")
+
+    user_id = message.from_user.id
+
+    with duckdb.connect(os.getenv("DB_PATH")) as con:
+        # Delete last n records for this user ordered by created_at DESC
+        sql = load_sql("delete_user_spends.sql")
+        result = con.execute(sql, [user_id, n])
+        deleted = result.rowcount
+
+    await state.clear()
+    await message.answer(
+        f"🗑️ Deleted {deleted} spend record(s) from your recent history.\n"
+        "Use /list to see what remains."
     )
 
 
