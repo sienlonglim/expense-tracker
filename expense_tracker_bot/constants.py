@@ -5,18 +5,19 @@ CREDIT_CARDS = {
     "trust cashback": "Trust Cashback",
     "uob one": "UOB ONE",
     "uob ladys": "UOB Lady's",
+    "uob ppv": "UOB Preferred Visa"
 }
 
 COMMANDS = {
     "start": "Start the bot",
-    "add": "Log a new credit card spend (select from menu)",
-    "backup": "Back up to a local database instance",
-    "cancel": "Cancel current operation",
-    "comment": "Log a comment on spending",
-    "delete": "Deletes last n spends",
-    "export": "Export all spends as CSV and Excel",
-    "help": "Show all available commands",
-    "list": "View your recent spends",
-    "reset": "Resets all your spends",
     "stats": "View your spending statistics",
+    "add": "Log a new credit card spend (select from menu)",
+    "comment": "Log a comment on spending",
+    "list": "View your recent spends",
+    "delete": "Deletes last n spends",
+    "cancel": "Cancel current operation",
+    "backup": "Back up to a local database instance",
+    "export": "Export all spends as CSV and Excel",
+    "reset": "Resets all your spends",
+    "help": "Show all available commands",
 }
