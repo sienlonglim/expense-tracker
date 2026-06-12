@@ -1,6 +1,7 @@
 CREDIT_CARDS = {
     "citireward": "Citi Rewards",
     "dbs yuu": "DBS Yuu",
+    "dbs woman's world": "DBS Woman's World",
     "Maribank": "Maribank",
     "trust cashback": "Trust Cashback",
     "uob one": "UOB ONE",
