@@ -1,7 +1,7 @@
 [project]
 name = "expense-tracker"
 version = "0.1.0"
-description = "Telegram bot for expense tracing"
+description = "Telegram bot for expense tracking"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
